@@ -66,13 +66,58 @@ def contact_new():
         BASE,
         body = """
         <form method="post" action="/contact">
-          <label>Name <input name="name"></label><br>
-          <label>Message <textarea name="message"></textarea></label><br>
+          <label>Name: <input name="name"></label><br>
+          <label>Message: <textarea name="message"></textarea></label><br>
           <button type="submit">Send</button>
         </form>
         """,
         title = "Contact Us",
     )
+
+@app.post("/contact")
+def contact_create():
+    name = request.form.get("name", "")
+    message = request.form.get("message", "")
+    body_html = render_template_string("""
+        <p>Thanks, {{ name }}. We received your message:</p>
+        <pre>{{ message }}</pre>
+    """, name=name, message=message)
+    return render_template_string(
+        BASE,  # BASE must use {{ body|safe }}
+        title="Contact Submitted",
+        body=body_html
+    )
+
+# -------------------------------------------------------------------
+# 3) Posts (index, new, create, detail, edit, update), likes, search
+# RESTful-HTML conventions using only GET/POST
+# -------------------------------------------------------------------
+
+@app.get("/posts")
+def posts_index():
+    q = request.args.get("search")
+    posts = list(POSTS.values())
+    if q:
+        ql = q.lower()
+        posts = [p for p in posts if ql.lower() in p["title"].lower() or ql.lower() in p["body"].lower()]
+
+    body_html = render_template_string("""
+    <form method="get" action="/posts" style="margin-bottom:1rem">
+        <input name="search" placeholder="search" value="{{ request.args.get('search','') }}">
+        <button type="submit">Search</button>
+    </form>
+    <a href="/posts/new">Create Post</a>
+    <ul>
+    {% for p in posts %}
+        <li>
+        <a href="/posts/{{ p.id }}">{{ p.title }}</a>
+        (likes: {{ p.likes|length }})
+        </li>
+    {% endfor %}
+    </ul>
+""", posts=posts, request=request)
+    return render_template_string(BASE, title="Posts", body=body_html)
+
 
 
 # -------------------------------------------------------------------
