@@ -55,6 +55,27 @@ def home_alias():
     return home()
 
 # -------------------------------------------------------------------
+# 2) Contact form (GET new + POST create)
+# GET /contact/new
+# POST /contact
+# -------------------------------------------------------------------
+
+@app.get("/contact/new")
+def contact_new():
+    return render_template_string(
+        BASE,
+        body = """
+        <form method="post" action="/contact">
+          <label>Name <input name="name"></label><br>
+          <label>Message <textarea name="message"></textarea></label><br>
+          <button type="submit">Send</button>
+        </form>
+        """,
+        title = "Contact Us",
+    )
+
+
+# -------------------------------------------------------------------
 # Dev server entry point
 # -------------------------------------------------------------------
 if __name__ == "__main__":
