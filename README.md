@@ -1,5 +1,3 @@
-============================================
-============================================
 ## EXAMPLE DOCUMENTATION
 ### Ask for the Home Page
 #### Step 1
@@ -27,9 +25,6 @@ website. Move on to the next request/response documentation.
 
 * Note
     - Headers contain many keys, but for this exercise focus on **Content-Type** and **Location**.
-
-=============================================
-=============================================
 
 ### Ask for a page that doesn't exist
 
