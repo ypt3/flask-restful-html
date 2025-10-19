@@ -99,7 +99,7 @@ def posts_index():
     posts = list(POSTS.values())
     if q:
         ql = q.lower()
-        posts = [p for p in posts if ql.lower() in p["title"].lower() or ql.lower() in p["body"].lower()]
+        posts = [p for p in posts if ql in p["title"].lower() or ql in p["body"].lower()]
 
     body_html = render_template_string("""
     <form method="get" action="/posts" style="margin-bottom:1rem">
@@ -119,6 +119,62 @@ def posts_index():
     return render_template_string(BASE, title="Posts", body=body_html)
 
 
+@app.get("/posts/new")
+def posts_new():
+    return render_template_string(
+        BASE,
+        title = "New Post",
+        body = """
+        <form method="post" action="/posts">
+          <label>Title <input name="title" required></label><br>
+          <label>Body <textarea name="body" required></textarea></label><br>
+          <label>User ID <input type="number" name="user_id" value="1" min="1" required></label><br>
+          <button type="submit">Create</button>
+        </form>
+        """,
+    )
+
+@app.post("/posts")
+def posts_create():
+    global _next_post_id
+    title = request.form.get("title", "").strip()
+    body = request.form.get("body", "").strip()
+    user_id = int(request.form.get("user_id", 1))
+    pid = _next_post_id
+    POSTS[pid] = {"id": pid, "user_id": user_id, "title": title, "body": body, "likes": set()}
+    _next_post_id += 1
+    return redirect(url_for("posts_detail", post_id=pid))
+
+@app.get("/posts/<int:post_id>")
+def posts_detail(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    post_user = USERS.get(post["user_id"], {"user_name": "?"})
+    post_comments = [c for c in COMMENTS.values() if c["post_id"] == post_id]
+
+    body_html = render_template_string(
+        """
+        <article>
+          <h2>{{ post.title }}</h2>
+          <p>{{ post.body }}</p>
+          <p>By user #{{ post.user_id }} ({{ post_user.username }})</p>
+          <form method="post" action="/posts/{{ post.id }}/like" style="display:inline">
+            <button>Like</button>
+          </form>
+          <form method="post" action="/posts/{{ post.id }}/like/delete" style="display:inline">
+            <button>Unlike</button>
+          </form>
+          <p>Likes: {{ post.likes|length }}</p>
+        </article>
+        <p>
+          <a href="/posts/{{ post.id }}/edit">Edit</a> ·
+          <a href="/posts/{{ post.id }}/comments">Comments ({{ post_comments|length }})</a>
+        </p>
+        """,
+        post = post,
+        post_user = post_user,
+        post_comments = post_comments,
+    )
+    return render_template_string(BASE, title=f"Post #{post_id}", body=body_html)
 
 # -------------------------------------------------------------------
 # Dev server entry point
