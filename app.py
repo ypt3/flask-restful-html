@@ -176,6 +176,51 @@ def posts_detail(post_id: int):
     )
     return render_template_string(BASE, title=f"Post #{post_id}", body=body_html)
 
+@app.get("/posts/<int:post_id>/edit")
+def posts_edit(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    body_html = render_template_string(
+        """
+        <form method="post" action="/posts/{{ post.id }}">
+          <label>Title <input name="title" value="{{ post.title }}"></label><br>
+          <label>Body <textarea name="body">{{ post.body }}</textarea></label><br>
+          <button type="submit">Save</button>
+        </form>
+        """,
+        post=post,
+    )
+    return render_template_string(BASE, title=f"Edit Post #{post_id}", body=body_html)
+
+@app.post("/posts/<int:post_id>")
+def posts_update(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    post["title"] = request.form.get("title", post["title"]).strip()
+    post["body"] = request.form.get("body", post["body"]).strip()
+    return redirect(url_for("posts_detail", post_id=post_id))
+
+@app.post("/posts/<int:post_id>/like")
+def posts_like(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    user_id = session.get("user_id", 1)
+    post["likes"].add(user_id)
+    return redirect(url_for("posts_detail", post_id=post_id))
+
+@app.post("/posts/<int:post_id>/like/delete")
+def posts_unlike(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    user_id = session.get("user_id", 1)
+    post["likes"].discard(user_id)
+    return redirect(url_for("posts_detail", post_id=post_id))
+
+@app.post("/posts/search")
+def posts_search_submit():
+    term = request.form.get("q", "")
+    return redirect(url_for("posts_index", search=term))
+
+# -------------------------------------------------------------------
+# Users + “user’s posts”
+# -------------------------------------------------------------------
+
 
 
 # -------------------------------------------------------------------
