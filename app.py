@@ -145,7 +145,7 @@ def posts_create():
     _next_post_id += 1
     return redirect(url_for("posts_detail", post_id=pid))
 
-@app.get("/posts/<int:post_id>")
+@app.get("/posts/<int:post_id>/edit")
 def posts_detail(post_id: int):
     post = POSTS.get(post_id) or abort(404)
     post_user = USERS.get(post["user_id"], {"user_name": "?"})
@@ -175,6 +175,8 @@ def posts_detail(post_id: int):
         post_comments = post_comments,
     )
     return render_template_string(BASE, title=f"Post #{post_id}", body=body_html)
+
+
 
 # -------------------------------------------------------------------
 # Dev server entry point
