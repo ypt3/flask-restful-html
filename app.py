@@ -145,7 +145,7 @@ def posts_create():
     _next_post_id += 1
     return redirect(url_for("posts_detail", post_id=pid))
 
-@app.get("/posts/<int:post_id>/edit")
+@app.get("/posts/<int:post_id>")
 def posts_detail(post_id: int):
     post = POSTS.get(post_id) or abort(404)
     post_user = USERS.get(post["user_id"], {"user_name": "?"})
