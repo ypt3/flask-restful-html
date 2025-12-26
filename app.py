@@ -314,6 +314,97 @@ def logout():
     return redirect("/")
 
 # -------------------------------------------------------------------
+# 6) Comments (nested under posts) + edit/update/delete
+# GET /posts/:post_id/comments
+# GET /posts/:post_id/comments/new
+# POST /posts/:post_id/comments
+# GET /comments/:comment_id/edit
+# POST /comments/:comment_id
+# POST /comments/:comment_id/delete
+# -------------------------------------------------------------------
+
+@app.get("/posts/<int:post_id>/comments")
+def comments_index(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    post_comments = [c for c in COMMENTS.values() if c["post_id"] == post_id]
+    body_html = render_template_string(
+        """
+        <p>Comments for <strong>{{ post.title }}</strong></p>
+        <p><a href="/posts/{{ post.id }}">← Back to Post</a></p>
+        <a href="/posts/{{ post.id }}/comments/new">Add Comment</a>
+        <ul>
+            {% for c in comments %}
+                <li>
+                {{ c.body }}
+                [<a href="/comments/{{ c.id }}/edit">edit</a>]
+                </li>
+            {% endfor %}
+        </ul>
+        """,
+        post=post,
+        comments=post_comments
+    )
+    return render_template_string(BASE, title=f"Comments for Post #{post_id}", body=body_html, session=session)
+
+@app.get("/posts/<int:post_id>/comments/new")
+def comments_new(post_id: int):
+    post = POSTS.get(post_id) or abort(404)
+    body_html = render_template_string(
+        """
+        <p><a href="/posts/{{ post.id }}/comments">← Back to Comments</a></p>
+        <form method="post" action="/posts/{{ post.id }}/comments">
+            <label>Comment <textarea name="body" required></textarea></label>
+            <button type="submit">Add</button>
+        </form>
+        """,
+        post=post
+    )
+    return render_template_string(BASE, title=f"New Comment for Post #{post_id}", body=body_html, session=session)
+
+@app.post("/posts/<int:post_id>/comments")
+def comments_create(post_id: int):
+    global _next_comment_id
+    post = POSTS.get(post_id) or abort(404)
+    body = request.form.get("body", "").strip()
+    if not body:
+        abort(400)
+
+    comment_id = _next_comment_id
+    COMMENTS[comment_id] = {"id": comment_id, "post_id": post_id, "body": body}
+    _next_comment_id += 1
+    return redirect(url_for("comments_index", post_id=post_id))
+
+@app.get("/comments/<int:comment_id>/edit")
+def comments_edit(comment_id: int):
+    c = COMMENTS.get(comment_id) or abort(404)
+    body_html = render_template_string(
+        """
+        <p><a href="/posts/{{ c.post_id }}/comments">← Back to Comments</a></p>
+        <form method="post" action="/comments/{{ c.id }}">
+            <label>Edit <textarea name="body">{{ c.body }}</textarea></label>
+            <button type="submit">Save</button>
+        </form>
+        <form method="post" action="/comments/{{ c.id }}/delete" style="margin-top:0.5rem">
+            <button type="submit">Delete</button>
+        </form>
+        """,
+        c=c
+    )
+    return render_template_string(BASE, title=f"Edit Comment #{comment_id}", body=body_html, session=session)
+
+@app.post("/comments/<int:comment_id>")
+def comments_update(comment_id: int):
+    c = COMMENTS.get(comment_id) or abort(404)
+    c["body"] = request.form.get("body", c["body"]).strip()
+    return redirect(url_for("comments_index", post_id=c["post_id"]))
+
+@app.post("/comments/<int:comment_id>/delete")
+def comments_delete(comment_id: int):
+    c = COMMENTS.pop(comment_id, None) or abort(404)
+    return redirect(url_for("comments_index", post_id=c["post_id"]))
+
+
+# -------------------------------------------------------------------
 # Dev server entry point
 # -------------------------------------------------------------------
 if __name__ == "__main__":
