@@ -176,14 +176,17 @@ def posts_detail(post_id: int):
         </article>
         <p>
           <a href="/posts/{{ post.id }}/edit">Edit</a> ·
-          <a href="/posts/{{ post.id }}/comments">Comments ({{ post_comments|length }})</a>
+          <a href="/posts/{{ post.id }}/comments">Comments ({{ post_comments|length }})</a> ·
+          <form method="post" action="/posts/{{ post.id }}/delete" style="display:inline" onsubmit="return confirm('Are you sure you want to delete this post?')">
+            <button type="submit" style="color:red">Delete</button>
+          </form>
         </p>
         """,
         post = post,
         post_user = post_user,
         post_comments = post_comments,
     )
-    return render_template_string(BASE, title=f"Post #{post_id}", body=body_html)
+    return render_template_string(BASE, title=f"Post #{post_id}", body=body_html, session=session)
 
 @app.get("/posts/<int:post_id>/edit")
 def posts_edit(post_id: int):
@@ -220,6 +223,17 @@ def posts_unlike(post_id: int):
     user_id = session.get("user_id", 1)
     post["likes"].discard(user_id)
     return redirect(url_for("posts_detail", post_id=post_id))
+
+@app.post("/posts/<int:post_id>/delete")
+def posts_delete(post_id: int):
+    post = POSTS.pop(post_id, None) or abort(404)
+
+    # Delete all comments associated with this post
+    comments_to_delete = [c_id for c_id, c in COMMENTS.items() if c["post_id"] == post_id]
+    for c_id in comments_to_delete:
+        COMMENTS.pop(c_id, None)
+
+    return redirect(url_for("posts_index"))
 
 @app.post("/posts/search")
 def posts_search_submit():
