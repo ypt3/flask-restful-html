@@ -2,6 +2,7 @@ from flask import Flask, request, redirect, url_for, render_template_string, ses
 # from jinja2 import DictLoader
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key-change-in-production'  # Required for sessions
 
 # -------------------------------------------------------------------
 # Fake in-memory stores (for demo only)
@@ -32,7 +33,14 @@ BASE = """
   <a href="/posts">Posts</a> ·
   <a href="/users/1/posts">Alice's Posts</a> ·
   <a href="/contact/new">Contact</a> ·
-  <a href="/login/new">Login</a>
+  {% if session.get('user_id') %}
+    <span>Logged in as User #{{ session['user_id'] }}</span> ·
+    <form method="post" action="/logout" style="display:inline">
+      <button type="submit" style="background:none;border:none;color:blue;text-decoration:underline;cursor:pointer">Logout</button>
+    </form>
+  {% else %}
+    <a href="/login/new">Login</a>
+  {% endif %}
 </nav>
 <div>
   {{ body|safe }}
@@ -48,6 +56,7 @@ def home():
         BASE ,
         title = "Home",
         body = "<p>Welcome to the demo site.</p>",
+        session = session,
     )
 
 @app.get("/home")
@@ -259,6 +268,50 @@ def user_posts(user_id: int):
         posts=posts,
     )
     return render_template_string(BASE, title=f"{user['username']}'s Posts", body=body_html)
+
+# -------------------------------------------------------------------
+# 5) Auth (login form + submit, logout submit)
+# GET /login/new
+# POST /login
+# POST /logout
+# -------------------------------------------------------------------
+@app.get("/login/new")
+def login_new():
+    body_html = render_template_string(
+        """
+        <form method="post" action="/login">
+            <label>User ID <input type="number" min="1" name="user_id" value="1"></label>
+            <button type="submit">Log In</button>
+        </form>
+        """
+    )
+    return render_template_string(BASE, title="Log in", body=body_html)
+
+@app.post("/login")
+def login_create():
+    uid = int(request.form.get("user_id", 1))
+    if uid not in USERS:
+        # Better error handling with user feedback
+        body_html = render_template_string(
+            """
+            <p style="color:red">Invalid user ID. Please try again.</p>
+            <form method="post" action="/login">
+                <label>User ID <input type="number" min="1" name="user_id" value="{{ uid }}"></label>
+                <button type="submit">Log In</button>
+            </form>
+            <p><a href="/users/new">Create a new user</a></p>
+            """,
+            uid=uid
+        )
+        return render_template_string(BASE, title="Login Error", body=body_html)
+
+    session["user_id"] = uid
+    return redirect("/")
+
+@app.post("/logout")
+def logout():
+    session.pop("user_id", None)
+    return redirect("/")
 
 # -------------------------------------------------------------------
 # Dev server entry point
