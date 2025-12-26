@@ -220,8 +220,45 @@ def posts_search_submit():
 # -------------------------------------------------------------------
 # Users + “user’s posts”
 # -------------------------------------------------------------------
+@app.get("/users/new")
+def users_new():
+        body_html = render_template_string(
+            """
+           <form method="post" action="/users">
+                <label>Username <input name="username" required></label>
+                <button type="submit">Create User</button>
+            </form>
+            """,
+        )
+        return render_template_string(BASE, title="New User", body=body_html)
+@app.post("/users")
+def users_create():
+    global _next_user_id
+    username = request.form.get("username", "").strip()
+    if not username:
+        abort(400)
+    uid = _next_user_id
+    USERS[uid] = {"id": uid, "username": username}
+    _next_user_id += 1
+    return redirect(url_for("user_posts", user_id=uid))
 
-
+@app.get("/users/<int:user_id>/posts")
+def user_posts(user_id: int):
+    user = USERS.get(user_id) or abort(404)
+    posts = [p for p in POSTS.values() if p["user_id"] == user_id]
+    body_html = render_template_string(
+        """
+        <p>Posts by {{ user.username }}:</p>
+            <ul>
+            {% for p in posts %}
+            <li><a href="/posts/{{ p.id }}">{{ p.title }}</a></li>
+            {% endfor %}
+        </ul>
+        """,
+        user=user,
+        posts=posts,
+    )
+    return render_template_string(BASE, title=f"{user['username']}'s Posts", body=body_html)
 
 # -------------------------------------------------------------------
 # Dev server entry point
